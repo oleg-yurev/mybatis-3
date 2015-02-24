@@ -28,7 +28,7 @@ import org.apache.ibatis.type.UnknownTypeHandler;
  * @author Clinton Begin
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.FIELD})
 public @interface Result {
   boolean id() default false;
 

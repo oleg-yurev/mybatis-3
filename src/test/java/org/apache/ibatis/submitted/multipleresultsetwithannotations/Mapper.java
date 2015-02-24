@@ -1,5 +1,5 @@
 /*
- *    Copyright 2009-2011 the original author or authors.
+ *    Copyright 2009-2012 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -13,20 +13,18 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package org.apache.ibatis.annotations;
+package org.apache.ibatis.submitted.multipleresultsetwithannotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.Results;
+import org.apache.ibatis.annotations.Select;
 
-/**
- * @author Clinton Begin
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Select {
-  String[] value();
+import java.util.List;
 
-  String resultSets() default "";
+public interface Mapper {
+
+  @Select(value = "{ call GetOrderDetailsAndHeaders() }", resultSets = "orderDetailResultSet,orderHeaderResultSet")
+  List<OrderDetail> getOrderDetailsWithHeaders();
+
 }

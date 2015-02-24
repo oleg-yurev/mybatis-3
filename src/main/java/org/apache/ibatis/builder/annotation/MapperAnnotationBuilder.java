@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.Association;
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.CacheNamespaceRef;
 import org.apache.ibatis.annotations.Case;
@@ -60,6 +62,7 @@ import org.apache.ibatis.binding.MapperMethod.ParamMap;
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.builder.IncompleteElementException;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.builder.ResultMapResolver;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
@@ -209,6 +212,8 @@ public class MapperAnnotationBuilder {
     applyConstructorArgs(args, returnType, resultMappings);
     applyResults(results, returnType, resultMappings);
     Discriminator disc = applyDiscriminator(resultMapId, returnType, discriminator);
+    applyAssociations(returnType, resultMappings);
+    applyResults(returnType, resultMappings);
     assistant.addResultMap(resultMapId, returnType, null, disc, resultMappings, null); // TODO add AutoMappingBehaviour
     createDiscriminatorResultMaps(resultMapId, returnType, discriminator);
   }
@@ -304,6 +309,7 @@ public class MapperAnnotationBuilder {
         resultMapId = parseResultMap(method);
       }
 
+      final Select select = method.getAnnotation(Select.class);
       assistant.addMappedStatement(
           mappedStatementId,
           sqlSource,
@@ -324,10 +330,10 @@ public class MapperAnnotationBuilder {
           keyColumn,
           null,
           languageDriver,
-          null);
+          select != null ? nullOrEmpty(select.resultSets()) : null);
     }
   }
-  
+
   private LanguageDriver getLanguageDriver(Method method) {
     Lang lang = method.getAnnotation(Lang.class);
     Class<?> langClass = null;
@@ -489,6 +495,32 @@ public class MapperAnnotationBuilder {
     }
   }
 
+  private void applyResults(Class<?> resultType, List<ResultMapping> resultMappings) {
+    for (final Field aField : resultType.getDeclaredFields()) {
+      final Result result = aField.getAnnotation(Result.class);
+      if (result != null) {
+        ArrayList<ResultFlag> flags = new ArrayList<ResultFlag>();
+        if (result.id()) flags.add(ResultFlag.ID);
+        ResultMapping resultMapping = assistant.buildResultMapping(
+                resultType,
+                nullOrEmpty(aField.getName()),
+                nullOrEmpty(result.column()),
+                aField.getType(),
+                result.jdbcType() == JdbcType.UNDEFINED ? null : result.jdbcType(),
+                null,
+                null,
+                null,
+                null,
+                result.typeHandler() == UnknownTypeHandler.class ? null : result.typeHandler(),
+                flags,
+                null,
+                null,
+                isLazy(result));
+        resultMappings.add(resultMapping);
+      }
+    }
+  }
+
   private String nestedSelectId(Result result) {
     String nestedSelect = result.one().select();
     if (nestedSelect.length() < 1) {
@@ -538,6 +570,49 @@ public class MapperAnnotationBuilder {
           null,
           false);
       resultMappings.add(resultMapping);
+    }
+  }
+
+  private void applyAssociations(Class<?> resultType, List<ResultMapping> resultMappings) {
+    for (Field aField : resultType.getDeclaredFields()) {
+      Association association;
+      if ((association = aField.getAnnotation(Association.class)) != null) {
+        Class<?> javaType = aField.getType();
+        String property = aField.getName();
+        String column = association.column();
+        String foreignColumn = association.foreignColumn();
+        boolean autoMapping = association.autoMapping();
+        String resultSet = association.resultSet();
+
+
+        final String id = resultType.getSimpleName() + "_" + aField.getName();
+        ResultMapResolver resultMapResolver = new ResultMapResolver(assistant, id, javaType, null, null, resultMappings, autoMapping);
+
+        String resultMapId;
+        try {
+          resultMapId = resultMapResolver.resolve().getId();
+        } catch (IncompleteElementException  e) {
+          configuration.addIncompleteResultMap(resultMapResolver);
+          throw e;
+        }
+
+        ResultMapping resultMapping = assistant.buildResultMapping(
+                resultType,
+                property,
+                nullOrEmpty(column),
+                javaType,
+                null,
+                null,
+                resultMapId,
+                null,
+                null,
+                null,
+                null,
+                resultSet,
+                foreignColumn,
+                false);
+        resultMappings.add(resultMapping);
+      }
     }
   }
 
