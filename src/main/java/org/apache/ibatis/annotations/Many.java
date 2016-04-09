@@ -34,6 +34,8 @@ public @interface Many {
 
   String resultMap() default "";
 
+  String foreignColumn() default "";
+
   FetchType fetchType() default FetchType.DEFAULT;
 
 }

@@ -505,7 +505,7 @@ public class MapperAnnotationBuilder {
           result.typeHandler() == UnknownTypeHandler.class ? null : result.typeHandler(),
           flags,
           hasNestedResultSet(result) ? nestedResultSet(result) : null,
-          null,
+          nestedForeignColumn(result),
           isLazy(result));
       resultMappings.add(resultMapping);
     }
@@ -532,6 +532,10 @@ public class MapperAnnotationBuilder {
       nestedResultMap = type.getName() + "." + nestedResultMap;
     }
     return nestedResultMap;
+  }
+
+  private String nestedForeignColumn(Result result) {
+    return result.many().foreignColumn();
   }
 
   private boolean isLazy(Result result) {

@@ -45,14 +45,25 @@ public interface SPMapper {
   List<List<?>> getNamesAndItems();
 
   List<Name> getNamesAndItemsLinked();
-  
+
+  @Select("{call sptest.getnamesanditems()}")
+  @Results({
+    @Result(id = true, property = "id", column = "id"),
+    @Result(property = "firstName", column = "FIRST_NAME"),
+    @Result(property = "lastName", column = "LAST_NAME"),
+    @Result(property = "items", column = "id", many = @Many(foreignColumn = "name_id", resultMap = "itemResult", resultSet = "items"))
+  })
+  @Options(resultSets = "names,items", statementType = StatementType.CALLABLE)
+  List<Name> getNamesAndItemsLinkedAnnotationBased();
+
   List<Name> getNamesAndItemsLinkedById(int id);
 
   @Select("{call sptest.getnamesanditemsbyid(#{id,jdbcType=INTEGER,mode=IN})}")
   @Results({
+    @Result(id = true, property = "id", column = "id"),
     @Result(property = "firstName", column = "FIRST_NAME"),
     @Result(property = "lastName", column = "LAST_NAME"),
-    @Result(property = "items", many = @Many(resultMap = "itemResult", resultSet = "items"))
+    @Result(property = "items", column = "id", many = @Many(foreignColumn = "name_id", resultMap = "itemResult", resultSet = "items"))
   })
   @Options(resultSets = "names,items", statementType = StatementType.CALLABLE)
   List<Name> getNamesAndItemsLinkedByIdAnnotationBased(@Param("id") int id);

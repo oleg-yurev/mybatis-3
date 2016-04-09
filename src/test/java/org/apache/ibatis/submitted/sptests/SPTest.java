@@ -845,6 +845,24 @@ public class SPTest {
   }
 
   @Test
+  public void testGetNamesAndItemsLinkedAnnotationBased() throws SQLException {
+    SqlSession sqlSession = sqlSessionFactory.openSession();
+    try {
+      SPMapper spMapper = sqlSession.getMapper(SPMapper.class);
+
+      List<Name> names1 = spMapper.getNamesAndItemsLinked();
+      List<Name> names2 = spMapper.getNamesAndItemsLinkedAnnotationBased();
+      assertEquals(names1.size(), names2.size());
+      assertEquals(names1.get(0).getItems().size(), names2.get(0).getItems().size());
+      assertEquals(names1.get(1).getItems().size(), names2.get(1).getItems().size());
+      assertEquals(names1.get(2).getItems(), names2.get(2).getItems());
+      assertEquals(names1.get(3).getItems(), names2.get(3).getItems());
+    } finally {
+      sqlSession.close();
+    }
+  }
+
+  @Test
   public void testGetNamesAndItemsLinkedWithNoMatchingInfo() throws SQLException {
     SqlSession sqlSession = sqlSessionFactory.openSession();
     try {
